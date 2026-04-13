@@ -1,0 +1,13 @@
+{
+    "name": "Naghlu",
+    "country": "Afghanistan",
+    "basin": "Indus",
+    "basin_hybas_id": "4030033640",
+    "latitude": 34.641111,
+    "longitude": 69.716944,
+    "catchment_area": 26000.0,
+    "height": 110.0,
+    "capacity": 550.0,
+    "built_year": 1968,
+    "diff_ca": 26237.8561845
+}

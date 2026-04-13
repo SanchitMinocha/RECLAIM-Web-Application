@@ -1,0 +1,813 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Dam Monitoring Dashboard</title>
+
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css"
+    />
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.29.1.min.js"></script>
+    <style>
+      :root {
+        --header-height: 70px;
+        --footer-height: 60px;
+        --primary-blue: #2563eb;
+        --dark-slate: #1e293b;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+        overflow: hidden;
+        background: #f1f5f9;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+      }
+
+      /* --- HEADER & LOGO --- */
+      header {
+        height: var(--header-height);
+        min-height: var(--header-height); /* Forces the 70px minimum */
+        flex-shrink: 0; /* Prevents the map from squishing it */
+        background: white;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 25px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        z-index: 2000;
+        box-sizing: border-box; /* Ensures padding doesn't add to the 70px */
+      }
+      .logo-container {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+      }
+      .logo-placeholder {
+        height: 45px;
+        width: 45px;
+        background: #e2e8f0;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
+      .logo-placeholder img {
+        height: 100%;
+        width: auto;
+      }
+      .app-title {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #1e293b;
+        letter-spacing: -0.5px;
+      }
+
+      /* --- HAMBURGER MENU --- */
+      .menu-container {
+        position: relative;
+      }
+      .hamburger {
+        background: none;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        padding: 10px;
+      }
+      .hamburger span {
+        display: block;
+        width: 25px;
+        height: 3px;
+        background: var(--dark-slate);
+        border-radius: 2px;
+      }
+      .dropdown-menu {
+        position: absolute;
+        top: 50px;
+        right: 0;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        width: 200px;
+        display: none;
+        flex-direction: column;
+        overflow: hidden;
+        z-index: 3000;
+      }
+      .dropdown-menu.show {
+        display: flex;
+      }
+      .dropdown-menu a,
+      .dropdown-menu button {
+        padding: 12px 20px;
+        text-decoration: none;
+        color: var(--dark-slate);
+        font-size: 14px;
+        border: none;
+        background: none;
+        text-align: left;
+        cursor: pointer;
+        width: 100%;
+        border-bottom: 1px solid #f1f5f9;
+        font-family: inherit;
+      }
+      .dropdown-menu a:hover,
+      .dropdown-menu button:hover {
+        background: #f8fafc;
+        color: var(--primary-blue);
+      }
+
+      /* --- MODAL --- */
+      .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 5000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+      }
+      .modal-content {
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        max-width: 500px;
+        width: 90%;
+        position: relative;
+      }
+      .close-modal {
+        position: absolute;
+        top: 15px;
+        right: 20px;
+        cursor: pointer;
+        font-size: 24px;
+      }
+
+      /* --- FOOTER --- */
+      footer {
+        height: var(--footer-height);
+        background: var(--dark-slate);
+        color: #f1f5f9;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 25px;
+        font-size: 12px;
+        z-index: 2000;
+      }
+      footer a {
+        color: #60a5fa;
+        text-decoration: none;
+      }
+      .footer-credits {
+        text-align: right;
+        line-height: 1.4;
+      }
+
+      /* --- MAP & CHART --- */
+      #map {
+        flex-grow: 1;
+        width: 100%;
+        background: #aad3df;
+        position: relative;
+      }
+      #nav-container {
+        position: absolute;
+        top: 90px;
+        right: 20px;
+        z-index: 1000;
+      }
+      #map-btn {
+        background: var(--primary-blue);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 600;
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+      }
+      #chart-panel {
+        position: fixed;
+        bottom: -400px;
+        left: 0;
+        width: 100%;
+        height: 400px;
+        background: white;
+        z-index: 1001;
+        box-shadow: 0 -5px 25px rgba(0, 0, 0, 0.15);
+        transition: bottom 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        padding: 30px;
+        box-sizing: border-box;
+        border-top: 1px solid #e2e8f0;
+      }
+      #chart-panel.active {
+        bottom: var(--footer-height);
+      }
+      .download-btn {
+        background: #78350f;
+        color: white;
+        border: none;
+        padding: 6px 14px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-left: 15px;
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      /* --- CLUSTERS --- */
+      .cluster-pin {
+        width: 32px;
+        height: 32px;
+        border-radius: 50% 50% 50% 0;
+        background: var(--primary-blue);
+        position: absolute;
+        transform: rotate(-45deg);
+        left: 50%;
+        top: 50%;
+        margin: -25px 0 0 -16px;
+        border: 2px solid white;
+        box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+        transition: background-color 0.1s ease, transform 0.1s ease;
+      }
+      .cluster-pin span {
+        transform: rotate(45deg);
+        display: block;
+        color: white;
+        font-weight: 700;
+        font-size: 12px;
+        text-align: center;
+        line-height: 32px;
+      }
+
+      .cluster-pin.cluster-highlight {
+        background: #dc2626 !important; /* A warm red */
+        border-color: #fef2f2 !important;
+        box-shadow: 0 0 15px rgba(220, 38, 38, 0.4);
+      }
+
+      .cluster-pin:hover {
+        transform: rotate(-45deg) scale(1.1);
+      }
+
+      #loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(15, 23, 42, 0.8);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+      /* This ensures the layer control sits neatly under or next to the zoom buttons */
+      .leaflet-top.leaflet-left .leaflet-control {
+        margin-bottom: 5px; /* Adds a clean gap between the +/- and the picker */
+        border: 2px solid rgba(0, 0, 0, 0.2); /* Matches the default zoom button border */
+      }
+
+      .cluster-polygon-red {
+        fill: #ff4500; /* Orange-Red */
+        stroke: #dc2626; /* Deep Red */
+        stroke-width: 2;
+        fill-opacity: 0.2;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="logo-container">
+        <div class="logo-placeholder">
+          <img
+            src="{% static 'dam_data/Reclaim_logo_clearBG.png' %}"
+            alt="Logo"
+            onerror="this.style.display='none'"
+          />
+        </div>
+        <div class="app-title">
+          Global Long-term Reservoir Sedimentation (GLoRS)
+        </div>
+      </div>
+
+      <div class="menu-container">
+        <button class="hamburger" id="hamburger-btn">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="dropdown-menu" id="dropdown-menu">
+          <button id="about-btn">About GLoRS</button>
+          <button id="about-reclaim-btn">About RECLAIM</button>
+          <a href="https://reclaimio.readthedocs.io/en/latest/" target="_blank"
+            >Documentation</a
+          >
+          <a href="https://github.com/UW-SASWE/RECLAIM" target="_blank"
+            >Source Code</a
+          >
+        </div>
+      </div>
+    </header>
+
+    <div class="modal-overlay" id="about-modal">
+      <div class="modal-content">
+        <span class="close-modal" id="close-about">&times;</span>
+        <h2 style="color: var(--dark-slate); margin-top: 0">About GLoRS</h2>
+        <p style="color: #475569; line-height: 1.6">
+          The Global Long-term Reservoir Sedimentation dataset (GLoRS v1.0) is the first global dataset providing 40 years (1984–2023) of annual sedimentation time series for more than 1,400 of the world's most societally critical reservoirs. Open-source data for resilient water management.
+        </p>
+      </div>
+    </div>
+    
+    <div class="modal-overlay" id="about-reclaim-modal">
+      <div class="modal-content">
+        <span class="close-modal" id="close-about-reclaim">&times;</span>
+        <h2 style="color: var(--dark-slate); margin-top: 0">About RECLAIM</h2>
+        <p style="color: #475569; line-height: 1.6">
+          Reservoir Estimation of Capacity Loss using AI-based Methods (RECLAIM) is a data-driven machine learning framework. It predicts annual sedimentation rates by synthesizing static reservoir geometries with time-varying hydroclimatic observations derived from satellite products.
+        </p>
+      </div>
+    </div>
+    </div>
+
+    <div id="loading-overlay">
+      <div
+        style="
+          border: 8px solid rgba(255, 255, 255, 0.2);
+          border-top: 8px solid #2563eb;
+          border-radius: 50%;
+          width: 80px;
+          height: 80px;
+          animation: spin 1s linear infinite;
+        "
+      ></div>
+    </div>
+
+    <div id="map"></div>
+
+    <div id="nav-container">
+      <button id="map-btn">Calculate for Your Reservoir</button>
+    </div>
+
+    <div id="chart-panel">
+      <span
+        id="close-chart"
+        style="
+          position: absolute;
+          right: 25px;
+          top: 15px;
+          cursor: pointer;
+          font-size: 32px;
+        "
+        >&times;</span
+      >
+      <div style="display: flex; align-items: center">
+        <h3
+          id="chart-title"
+          style="margin: 0; color: #1e293b; font-size: 1.6rem"
+        ></h3>
+        <button id="download-csv-btn" class="download-btn">Download CSV</button>
+      </div>
+      <p
+        id="chart-meta"
+        style="
+          margin: 8px 0 20px 0;
+          color: #475569;
+          font-size: 15px;
+          border-bottom: 1px solid #f1f5f9;
+          padding-bottom: 10px;
+        "
+      ></p>
+      <div id="timeSeriesChart" style="height: 230px; width: 100%"></div>
+    </div>
+
+    <footer>
+      <div>
+        Disclaimer: These estimates are satellite-derived and should be used for
+        research and preliminary assessment purposes only. <br />
+        &copy; 2025-2026
+        <a href="http://saswe.net/" target="_blank">SASWE Research Group</a>,
+        University of Washington.
+      </div>
+      <div class="footer-credits">
+        Developed by
+        <a href="https://linkedin.com/in/yourprofile" target="_blank"
+          >Joshua Zhao</a
+        >
+        &amp; Sanchit Minocha
+      </div>
+    </footer>
+
+    <script>
+      /* --- NAVIGATION LOGIC --- */
+      const menuBtn = document.getElementById("hamburger-btn");
+      const dropdown = document.getElementById("dropdown-menu");
+      const aboutBtn = document.getElementById("about-btn");
+      const aboutModal = document.getElementById("about-modal");
+
+      menuBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        dropdown.classList.toggle("show");
+      });
+      aboutBtn.addEventListener("click", () => {
+        dropdown.classList.remove("show");
+        aboutModal.style.display = "flex";
+      });
+      document.getElementById("close-about").onclick = () =>
+        (aboutModal.style.display = "none");
+
+      const aboutReclaimBtn = document.getElementById("about-reclaim-btn");
+      const aboutReclaimModal = document.getElementById("about-reclaim-modal");
+      const closeReclaimBtn = document.getElementById("close-about-reclaim");
+
+      if (aboutReclaimBtn) {
+        aboutReclaimBtn.addEventListener("click", () => {
+          dropdown.classList.remove("show");
+          aboutReclaimModal.style.display = "flex";
+        });
+      }
+      if (closeReclaimBtn) {
+        closeReclaimBtn.onclick = () => {
+          aboutReclaimModal.style.display = "none";
+        };
+      }
+
+      window.onclick = (e) => {
+        if (e.target == aboutModal) aboutModal.style.display = "none";
+        if (aboutReclaimModal && e.target == aboutReclaimModal) aboutReclaimModal.style.display = "none";
+        if (
+          !e.target.matches(".hamburger") &&
+          !e.target.matches(".hamburger span")
+        )
+          dropdown.classList.remove("show");
+      };
+
+      const southWest = L.latLng(-90, -180);
+      const northEast = L.latLng(90, 180);
+      const bounds = L.latLngBounds(southWest, northEast);
+
+      // --- INITIALIZE MAP WITH BOUNDS ---
+      const map = L.map("map", {
+        zoomSnap: 1.0,
+        wheelPxPerZoomLevel: 30, // Faster scroll velocity
+        minZoom: 2,
+        maxZoom: 20,          // optional max zoom
+        maxBounds: bounds,    // restrict map panning
+        maxBoundsViscosity: 1.0 // fully prevent overscroll
+  }).setView([15, 0], 2.5);
+
+      // --- STEP B: Define your basemaps (Add this here!) ---
+      // Base layers (only one active at a time)
+      const baseLayers = {
+        Street: L.tileLayer(
+          "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+          {
+            subdomains: "abcd",
+            maxZoom: 20,
+            attribution: "Tiles &copy; Esri",
+          }
+        ),
+        Satellite: L.tileLayer(
+          "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+          {
+            maxZoom: 20,
+            attribution: "Tiles &copy; Esri",
+          }
+        ),
+        Positron: L.tileLayer(
+        "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+        {
+          subdomains: "abcd",
+          maxZoom: 20,
+          attribution:
+            '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
+        }
+      ),
+      Physical: L.tileLayer(
+        "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
+        {
+          maxZoom: 17,
+          subdomains: "abc",
+          attribution:
+            'Map data: &copy; <a href="https://www.openstreetmap.org/">OSM</a>, SRTM | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a>',
+        }
+      ),
+      };
+
+      // Overlay layer (can be toggled independently)
+      const overlayLayers = {
+        "Blue Tint": L.tileLayer(
+          "https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png",
+          {
+            subdomains: "abcd",
+            maxZoom: 20,
+            opacity: 0.3,
+          }
+        ),
+      };
+
+      baseLayers.Street.addTo(map);
+
+      // --- STEP C: Add the control (This creates the UI button) ---
+      // Set 'position' to 'topleft' to put it right by the +/- buttons
+      L.control.layers(baseLayers, null, { position: "topleft" }).addTo(map);
+
+      const markers = L.markerClusterGroup({
+        // This styles the polygon that appears on hover/click
+        polygonOptions: {
+          className: "cluster-polygon-red", // Uses the CSS class above
+          color: "#dc2626", // Fallback stroke color
+          weight: 2,
+          opacity: 0.8,
+          fillColor: "#ff4500",
+          fillOpacity: 0.3,
+        },
+        iconCreateFunction: (cluster) => {
+          const hasActive = cluster
+            .getAllChildMarkers()
+            .some((m) => m === activeLayer);
+          const highlightClass = hasActive ? "cluster-highlight" : "";
+
+          return L.divIcon({
+            html: `<div class="cluster-pin ${highlightClass}"><span>${cluster.getChildCount()}</span></div>`,
+            className: "",
+            iconSize: L.point(40, 40),
+            iconAnchor: [20, 40],
+          });
+        },
+      });
+
+      // To make the clusters refresh their color immediately when a marker is clicked
+      function refreshClusters() {
+        markers.refreshClusters();
+      }
+
+      let timeSeriesData = [];
+      let lastFilteredData = []; // REQUIRED FOR DOWNLOAD
+      let currentResName = "";
+      let csvLoaded = false;
+      let csvLoading = false;
+      const CSV_URL = "{% static 'dam_data/GLoRS_v1_0_TS.csv' %}";
+
+      // Load GeoJSON immediately — no CSV blocking
+      loadGeoJson();
+
+      function loadCSVIfNeeded(onReady) {
+        if (csvLoaded) { onReady(); return; }
+        if (csvLoading) { setTimeout(() => loadCSVIfNeeded(onReady), 200); return; }
+        csvLoading = true;
+        document.getElementById("loading-overlay").style.display = "flex";
+        Papa.parse(CSV_URL, {
+          download: true,
+          header: true,
+          dynamicTyping: true,
+          skipEmptyLines: true,
+          complete: (results) => {
+            timeSeriesData = results.data;
+            csvLoaded = true;
+            csvLoading = false;
+            document.getElementById("loading-overlay").style.display = "none";
+            onReady();
+          },
+        });
+      }
+
+      /* --- CUSTOM ICON DEFINITION --- */
+      const damIcon = L.icon({
+        iconUrl: "{% static 'dam_data/damMarkerblue.png' %}", // Placeholder PNG link
+        iconSize: [32, 32], // Size of the icon
+        iconAnchor: [16, 32], // Point of the icon which will correspond to marker's location
+        popupAnchor: [0, -32], // Point from which the popup should open relative to the iconAnchor
+        tooltipAnchor: [16, -16],
+      });
+
+      const damIconRed = L.icon({
+        iconUrl: "{% static 'dam_data/damMarker.png' %}", // Your red marker image
+        iconSize: [32, 32],
+        iconAnchor: [16, 32],
+        popupAnchor: [0, -32],
+        tooltipAnchor: [16, -16],
+      });
+
+      let activeLayer = null;
+
+      function loadGeoJson() {
+        fetch("{% static 'dam_data/GLoRS_v1_0_aggregated.geojson' %}")
+          .then((res) => res.json())
+          .then((data) => {
+            const geoJsonLayer = L.geoJSON(data, {
+              pointToLayer: (feature, latlng) => {
+                return L.marker(latlng, {
+                  icon: damIcon, // Start with the blue icon
+                });
+              },
+              onEachFeature: (f, layer) => {
+                // HOVER EFFECT
+                layer.on("mouseover", function () {
+                  if (this !== activeLayer) {
+                    this.setIcon(damIconRed); // Switch to red on hover
+                  }
+                });
+
+                layer.on("mouseout", function () {
+                  if (this !== activeLayer) {
+                    this.setIcon(damIcon); // Switch back to blue on mouseout
+                  }
+                });
+
+                // CLICK EFFECT
+                layer.on("click", (e) => {
+                  L.DomEvent.stopPropagation(e);
+
+                  // Reset previous active layer
+                  if (activeLayer) {
+                    activeLayer.setIcon(damIcon);
+                  }
+
+                  // Set new active layer to red
+                  activeLayer = layer;
+                  activeLayer.setIcon(damIconRed);
+
+                  // Lazy-load the 105MB CSV only on first click
+                  loadCSVIfNeeded(() => {
+                    showChart(
+                      f.properties.idx,
+                      f.properties.Reservoir,
+                      f.properties.Country,
+                      f.properties.Major_River_Basin,
+                      f.properties.BY,
+                      f.properties.OBC
+                    );
+                  });
+                });
+
+                layer.bindTooltip(
+                  `<b>${f.properties.Reservoir || "Unknown"}</b>`
+                );
+              },
+            });
+
+            markers.addLayer(geoJsonLayer);
+            map.addLayer(markers);
+            document.getElementById("loading-overlay").style.display = "none";
+          });
+      }
+
+      // Add a line to the close-chart logic to clear the highlight
+      document.getElementById("close-chart").onclick = () => {
+        document.getElementById("chart-panel").classList.remove("active");
+        if (activeLayer) {
+          activeLayer.setIcon(damIcon);
+          activeLayer = null;
+          refreshClusters(); // Add this line to turn clusters back to blue
+        }
+      };
+
+      function showChart(idx, name, country, basin, buildYear, capacity) {
+        currentResName = name || "Unknown";
+        // Update global variable for CSV download
+        lastFilteredData = timeSeriesData
+          .filter((row) => String(row.idx).trim() === String(idx).trim())
+          .map((row) => ({
+            Year: row.OSY,
+            "Sedimentation Rate": parseFloat(row.Predicted_SR_by_RECLAIM.toFixed(4)), 
+          }))
+          .sort((a, b) => a.Year - b.Year);
+
+        if (lastFilteredData.length === 0) return alert("No data found");
+
+        document.getElementById("chart-panel").classList.add("active");
+        document.getElementById("chart-title").innerText = currentResName;
+        
+        const byText = buildYear || "N/A";
+        const capText = capacity ? capacity + " MCM" : "N/A";
+
+        document.getElementById(
+          "chart-meta"
+        ).innerHTML = `
+          <div style="display: flex; justify-content: space-between; font-size: 14px; margin-top: 4px; color: #475569;">
+            <span>Country: <b>${country}</b> | River Basin: <b>${basin}</b></span>
+            <span>Built Year: <b>${byText}</b> | Capacity: <b>${capText}</b></span>
+          </div>
+        `;
+
+        Plotly.newPlot(
+          "timeSeriesChart",
+          [
+            {
+              x: lastFilteredData.map((d) => d.Year),
+              y: lastFilteredData.map((d) => d["Sedimentation Rate"]),
+              type: "scatter",
+              mode: "lines+markers",
+              line: { color: "#78350f", width: 3 }, // Earthly brown (Matches button)
+              marker: { color: "#78350f", size: 6 },
+              fill: "tozeroy",
+              fillcolor: "rgba(120, 53, 15, 0.15)", // Very light brown tint
+            },
+          ],
+          {
+            margin: { l: 50, r: 20, t: 40, b: 40 },
+            yaxis: {
+              title: "Sedimentation Rate (MCM/year)",
+              gridcolor: "#f1f5f9", // Soft grid lines
+            },
+            xaxis: {
+              title: "Year",
+              gridcolor: "#f1f5f9",
+            },
+            plot_bgcolor: "rgba(0,0,0,0)",
+            paper_bgcolor: "rgba(0,0,0,0)",
+          }
+        );
+      }
+
+      /* --- DOWNLOAD IMPLEMENTATION --- */
+      document.getElementById("download-csv-btn").onclick = () => {
+        if (lastFilteredData.length === 0) return;
+        const csv = Papa.unparse(lastFilteredData);
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `${currentResName.replace(
+          /\s+/g,
+          "_"
+        )}_sedimentation_data.csv`;
+        link.click();
+      };
+      /* --- UI & INTERACTION LOGIC --- */
+
+      // Consolidated Close Chart Logic
+      document.getElementById("close-chart").onclick = () => {
+        // 1. Hide the panel
+        document.getElementById("chart-panel").classList.remove("active");
+
+        // 2. Reset the marker icon if one is active
+        if (activeLayer) {
+          activeLayer.setIcon(damIcon);
+          activeLayer = null; // Clear the reference
+
+          // 3. Refresh clusters to recalculate color/highlights
+          refreshClusters();
+        }
+      };
+
+      // Navigation button logic
+      document.getElementById("map-btn").onclick = () => {
+        window.location.href = "{% url 'estimator' %}";
+      };
+
+      /* --- CLUSTER HOVER LOGIC --- */
+      markers.on("clustermouseover", (a) => {
+        const clusterPin = a.layer.getElement().querySelector(".cluster-pin");
+        if (clusterPin) {
+          clusterPin.classList.add("cluster-highlight");
+        }
+      });
+
+      markers.on("clustermouseout", (a) => {
+        // Only remove the highlight if the cluster doesn't contain the currently selected active marker
+        const hasActive = a.layer
+          .getAllChildMarkers()
+          .some((m) => m === activeLayer);
+
+        if (!hasActive) {
+          const clusterPin = a.layer.getElement().querySelector(".cluster-pin");
+          if (clusterPin) {
+            clusterPin.classList.remove("cluster-highlight");
+          }
+        }
+      });
+    </script>
+  </body>
+</html>

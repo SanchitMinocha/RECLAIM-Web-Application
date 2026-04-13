@@ -1,0 +1,13 @@
+{
+    "name": "Bhakra",
+    "country": "India",
+    "basin": "Indus",
+    "basin_hybas_id": "4030033640",
+    "latitude": 31.411346,
+    "longitude": 76.433489,
+    "catchment_area": 56980.0,
+    "height": 167.64,
+    "capacity": 9868.0,
+    "built_year": 1958,
+    "diff_ca": 2772.708112599998
+}

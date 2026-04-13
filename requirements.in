@@ -1,0 +1,16 @@
+# Core web app frameworks
+Django
+djangorestframework
+django-cors-headers
+gunicorn
+
+# Data processing and geospatial
+pandas
+numpy
+geopandas
+
+# Machine Learning and ML Models
+pyreclaim
+
+# Plotting and Visualizations
+plotly
