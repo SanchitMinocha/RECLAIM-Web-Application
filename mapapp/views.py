@@ -144,7 +144,7 @@ def run_reclaim(request):
         job_id = str(uuid4())[:8]
         folder_name = f"{safe_name}_{job_id}"
 
-        upload_root = Path("/var/www/html/reclaim_dev/uploaded_files") / folder_name
+        upload_root = Path("/var/www/html/reclaim/uploaded_files") / folder_name
         upload_root.mkdir(parents=True, exist_ok=True)
 
         fs = FileSystemStorage(location=str(upload_root))

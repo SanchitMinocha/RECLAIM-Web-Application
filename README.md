@@ -40,8 +40,8 @@ Located in the `reclaim/` core, this stage transforms raw spatial and temporal d
 
 ### Environment Initialization
 ```bash
-git clone <your-repo-url>
-cd reclaim_dev
+git clone https://github.com/SanchitMinocha/RECLAIM-Web-Application.git
+cd RECLAIM-Web-Application
 python3 -m venv .reclaim_webapp_env
 source .reclaim_webapp_env/bin/activate
 pip install -r requirements.txt
