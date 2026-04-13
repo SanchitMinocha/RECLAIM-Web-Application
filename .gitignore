@@ -24,6 +24,9 @@ static/dam_data/
 media/
 temp_uploads/
 
+# Collected Static Files
+admin/
+
 # IDEs
 .vscode/
 .idea/
