@@ -152,7 +152,7 @@ pyproj==3.7.2
     # via
     #   geopandas
     #   rioxarray
-pyreclaim==0.5.0
+pyreclaim==0.6.0
     # via -r requirements.in
 python-dateutil==2.9.0.post0
     # via
