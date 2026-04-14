@@ -20,11 +20,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 STATIC_URL = "/reclaim/static/"
 
 # Absolute path where collectstatic will put files
-STATIC_ROOT = "/var/www/html/reclaim"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # Extra static files to collect (from your app-level static folders)
 STATICFILES_DIRS = [
-    BASE_DIR / "static",  # your project-level static folder
+    BASE_DIR / "source_static",  # your project-level static folder
 ]
 
 # Quick-start development settings - unsuitable for production

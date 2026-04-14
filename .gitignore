@@ -18,7 +18,6 @@ node_modules/
 # Data Directories
 mapapp/global_datasets/
 mapapp/rat_outputs/
-mapapp/sample_data/*.zip
 dam_data/
 static/dam_data/
 media/
