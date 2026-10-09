@@ -16,7 +16,7 @@ node_modules/
 *.rar
 
 # Data Directories
-mapapp/global_datasets/
+global_datasets/
 mapapp/rat_outputs/
 dam_data/
 static/dam_data/
@@ -30,3 +30,7 @@ admin/
 .vscode/
 .idea/
 .env
+
+.django-dev-key
+uploaded_files/
+staticfiles/

@@ -1,0 +1,15 @@
+{
+  "sample": "Davis_Bor",
+  "period": [
+    1984,
+    2023
+  ],
+  "http_status": 200,
+  "request_seconds": 23.62,
+  "process_peak_rss_gib": 1.922,
+  "prediction_rows": 40,
+  "csv_download_status": 200,
+  "rate_min": 17.7218,
+  "rate_max": 27.0238,
+  "passed": true
+}

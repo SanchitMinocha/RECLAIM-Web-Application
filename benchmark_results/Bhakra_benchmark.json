@@ -1,0 +1,15 @@
+{
+  "sample": "Bhakra",
+  "period": [
+    1984,
+    2023
+  ],
+  "http_status": 200,
+  "request_seconds": 20.87,
+  "process_peak_rss_gib": 0.904,
+  "prediction_rows": 40,
+  "csv_download_status": 200,
+  "rate_min": 12.008,
+  "rate_max": 23.9259,
+  "passed": true
+}

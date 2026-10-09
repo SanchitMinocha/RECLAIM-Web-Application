@@ -39,11 +39,11 @@ def should_delete_uploaded_files():
 
 BASE_DIR = Path(__file__).resolve().parent.parent  # already in settings
 
-base_dir = BASE_DIR / "mapapp" / "global_datasets"
+base_dir = Path("/tiger1/msanchit/research/sedimentation/RECLAIM_data/global_datasets")
 
 importlib.reload(gf)
 
-BASINS_FILE = "/var/www/html/reclaim/mapapp/basins_rat_sedi_v1 (1).geojson"
+BASINS_FILE = BASE_DIR / "mapapp" / "basins_rat_sedi_v1.geojson"
 
 _BASIN_LIST_CACHE = None
 
@@ -144,7 +144,7 @@ def run_reclaim(request):
         job_id = str(uuid4())[:8]
         folder_name = f"{safe_name}_{job_id}"
 
-        upload_root = Path("/var/www/html/reclaim/uploaded_files") / folder_name
+        upload_root = (BASE_DIR / "uploaded_files") / folder_name
         upload_root.mkdir(parents=True, exist_ok=True)
 
         fs = FileSystemStorage(location=str(upload_root))

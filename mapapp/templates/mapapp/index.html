@@ -12,6 +12,7 @@
       gtag('config', 'G-7Y8FM8TQ63');
     </script>
     <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="{% static 'dam_data/Reclaim_logo_clearBG.png' %}" />
     <title>GLoRS Dashboard</title>
 
     <link
@@ -383,6 +384,7 @@
       ></div>
     </div>
 
+    <div id="data-load-status" role="alert" hidden style="position: fixed; top: 110px; left: 20px; right: 20px; z-index: 2000; background: white; color: #991b1b; padding: 16px; border-radius: 8px;"></div>
     <div id="map"></div>
 
     <div id="nav-container">
@@ -594,6 +596,13 @@
       // Load GeoJSON immediately — no CSV blocking
       loadGeoJson();
 
+      function showDataLoadError(message) {
+        document.getElementById("loading-overlay").style.display = "none";
+        const status = document.getElementById("data-load-status");
+        status.textContent = message;
+        status.hidden = false;
+      }
+
       function loadCSVIfNeeded(onReady) {
         if (csvLoaded) { onReady(); return; }
         if (csvLoading) { setTimeout(() => loadCSVIfNeeded(onReady), 200); return; }
@@ -604,6 +613,11 @@
           header: true,
           dynamicTyping: true,
           skipEmptyLines: true,
+          error: (error) => {
+            csvLoading = false;
+            console.error("Time-series data failed to load", error);
+            showDataLoadError("Could not load reservoir time series. Please refresh to retry.");
+          },
           complete: (results) => {
             timeSeriesData = results.data;
             csvLoaded = true;
@@ -616,7 +630,7 @@
 
       /* --- CUSTOM ICON DEFINITION --- */
       const damIcon = L.icon({
-        iconUrl: "{% static 'dam_data/damMarkerblue.png' %}", // Placeholder PNG link
+        iconUrl: "{% static 'dam_data/damMarkerblue.svg' %}", // Placeholder PNG link
         iconSize: [32, 32], // Size of the icon
         iconAnchor: [16, 32], // Point of the icon which will correspond to marker's location
         popupAnchor: [0, -32], // Point from which the popup should open relative to the iconAnchor
@@ -624,7 +638,7 @@
       });
 
       const damIconRed = L.icon({
-        iconUrl: "{% static 'dam_data/damMarker.png' %}", // Your red marker image
+        iconUrl: "{% static 'dam_data/damMarker.svg' %}", // Your red marker image
         iconSize: [32, 32],
         iconAnchor: [16, 32],
         popupAnchor: [0, -32],
@@ -635,7 +649,10 @@
 
       function loadGeoJson() {
         fetch("{% static 'dam_data/GLoRS_v1_0_aggregated.geojson' %}")
-          .then((res) => res.json())
+          .then((res) => {
+            if (!res.ok) throw new Error(`Reservoir data request failed: ${res.status}`);
+            return res.json();
+          })
           .then((data) => {
             const geoJsonLayer = L.geoJSON(data, {
               pointToLayer: (feature, latlng) => {
@@ -692,6 +709,10 @@
             markers.addLayer(geoJsonLayer);
             map.addLayer(markers);
             document.getElementById("loading-overlay").style.display = "none";
+          })
+          .catch((error) => {
+            console.error("Reservoir map failed to load", error);
+            showDataLoadError("Could not load the reservoir map. Please refresh to retry.");
           });
       }
 

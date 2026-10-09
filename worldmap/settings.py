@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
+import os
+from django.core.exceptions import ImproperlyConfigured
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -23,20 +25,24 @@ STATIC_URL = "/reclaim/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # Extra static files to collect (from your app-level static folders)
-STATICFILES_DIRS = [
-    BASE_DIR / "source_static",  # your project-level static folder
-]
+STATICFILES_DIRS = [p for p in [BASE_DIR / "source_static"] if p.exists()]
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-f^%n_k$4y_jd1%1#vjl6trfk*iz**w-w&4!(^=d99p6o02-hx8"
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-ALLOWED_HOSTS = ["f-hossain-3.ce.washington.edu", "128.95.45.89", "127.0.0.1", 'localhost']
+DEBUG = os.environ.get("DJANGO_DEBUG", "true").lower() == "true"
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "")
+if not SECRET_KEY:
+    if not DEBUG:
+        raise ImproperlyConfigured("Set DJANGO_SECRET_KEY for production")
+    key_file = BASE_DIR / ".django-dev-key"
+    if not key_file.exists():
+        import secrets
+        with open(key_file, "x", opener=lambda path, flags: os.open(path, flags, 0o600)) as handle:
+            handle.write(secrets.token_urlsafe(64))
+    SECRET_KEY = key_file.read_text().strip()
+ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
 
 
 # Application definition
